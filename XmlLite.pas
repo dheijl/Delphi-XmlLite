@@ -8,6 +8,12 @@
   * More info: http://msdn.microsoft.com/en-us/library/ms752838%28v=VS.85%29.aspx
 
   Note: This is a minimal translation, some parts were not implemented and most are untested.
+
+  UPD: https://github.com/the-Arioch/Delphi-XmlLite
+    Updated to Windows SDK 2016, fixed declarations errors, added error-messages, merged forks.
+    Win64 compatibility should work but was not tested.
+    Many functions and new interfaces should work but were not tested.
+    Caveat emptor (well, this is FLOSS, so it is your software, not mine; use responsibly)
   ----------------------------------------------------------------------------- }
 unit XmlLite;
 
@@ -18,77 +24,69 @@ uses
   Windows, // LONG_PTR type in Win32/Win64 with different Delphi versions
   SysUtils;
 
-// TODO: The underscored superlong enum values are crazy.
-//       Better to use Scoped Enumerations
-//       They are supported starting with Delphi 2009 (missing in 2007 and prior)
-//       They are supported starting with FPC 2.6.0
-//       Would anyone really care about prior versions? Hardly so.
-// http://docs.embarcadero.com/products/rad_studio/delphiAndcpp2009/HelpUpdate2/EN/html/devcommon/compdirsscopedenums_xml.html
-// http://docs.embarcadero.com/products/rad_studio/radstudio2007/RS2007_helpupdates/HUpdate4/EN/html/devcommon/delphicompdirectivespart_xml.html
-// http://wiki.freepascal.org/FPC_New_Features_2.6.0
-
 {$MINENUMSIZE 4}
+{$ScopedEnums ON}
 type
   XmlNodeType = (
-    XmlNodeType_None = 0,
-    XmlNodeType_Element = 1,
-    XmlNodeType_Attribute = 2,
-    XmlNodeType_Text = 3,
-    XmlNodeType_CDATA = 4,
-    XmlNodeType_ProcessingInstruction = 7,
-    XmlNodeType_Comment = 8,
-    XmlNodeType_DocumentType = 10,
-    XmlNodeType_Whitespace = 13,
-    XmlNodeType_EndElement = 15,
-    XmlNodeType_XmlDeclaration = 17
+    None = 0,
+    Element = 1,
+    Attribute = 2,
+    Text = 3,
+    CDATA = 4,
+    ProcessingInstruction = 7,
+    Comment = 8,
+    DocumentType = 10,
+    Whitespace = 13,
+    EndElement = 15,
+    XmlDeclaration = 17
     );
 
   XmlStandAlone = (
-    XmlStandalone_Omit = 0,
-    XmlStandalone_Yes = 1,
-    XmlStandalone_No = 2
+    Omit = 0,
+    Yes = 1,
+    No = 2
     );
 
   XmlWriterProperty = (
-    XmlWriterProperty_MultiLanguage = 0,
-    XmlWriterProperty_Indent = 1,
-    XmlWriterProperty_ByteOrderMark = 2,
-    XmlWriterProperty_OmitXmlDeclaration = 3,
-    xmlWriterProperty_ConformanceLevel = 4,
-    XmlWriterProperty_CompactEmptyElement = 5
+    MultiLanguage = 0,
+    Indent = 1,
+    ByteOrderMark = 2,
+    OmitXmlDeclaration = 3,
+    ConformanceLevel = 4,
+    CompactEmptyElement = 5
     );
 
   XmlReaderProperty = (
-    XmlReaderProperty_MultiLanguage = 0,
-    XmlReaderProperty_ConformanceLevel = 1,
-    XmlReaderProperty_RandomAccess = 2,
-    XmlReaderProperty_XmlResolver = 3,
-    XmlReaderProperty_DtdProcessing = 4,
-    XmlReaderProperty_ReadState = 5,
-    XmlReaderProperty_MaxElementDepth = 6,
-    XmlReaderProperty_MaxEntityExpansion = 7
+    MultiLanguage = 0,
+    ConformanceLevel = 1,
+    RandomAccess = 2,
+    XmlResolver = 3,
+    DtdProcessing = 4,
+    ReadState = 5,
+    MaxElementDepth = 6,
+    MaxEntityExpansion = 7
     );
 
   XmlReadState = (
-    XmlReadState_Initial	= 0,
-    XmlReadState_Interactive	= 1,
-    XmlReadState_Error	= 2,
-    XmlReadState_EndOfFile	= 3,
-    XmlReadState_Closed	= 4
+    Initial	= 0,
+    Interactive	= 1,
+    Error	= 2,
+    EndOfFile	= 3,
+    Closed	= 4
     );
 
-  DtdProcessing = (
-    XmlDtdProcessing_Prohibit = 0,
-    XmlDtdProcessing_Parse = 1
+  XmlDtdProcessing = (
+    Prohibit = 0,
+    Parse = 1
     );
 
   XmlConformanceLevel = (
-    XmlConformanceLevel_Auto	= 0,
-    XmlConformanceLevel_Fragment	= 1,
-    XmlConformanceLevel_Document	= 2
+    Auto	= 0,
+    Fragment	= 1,
+    Document	= 2
     );
 
-(**  Win32/Win64 properties compatibility
+(**  Win32/Win64 properties compatibility, datatypes, enume sizes:
 
  https://msdn.microsoft.com/en-us/library/ms752842.aspx
  HRESULT GetProperty ([in] UINT nProperty, [out] LONG_PTR ** ppValue);
@@ -114,8 +112,18 @@ type
    b) PWideChar can tell states of "no string" aka nil aka NULL and
             one of empty aka 0-length string. But one can not pass
             nil instead of UnicodeString/WideString into, say, WriteElementString
- **)
 
+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ The underscored superlong enum values like "XmlNodeType_ProcessingInstruction" are crazy.
+       Better to use Scoped Enumerations
+       They are supported starting with Delphi 2009 (missing in 2007 and prior)
+       They are supported starting with FPC 2.6.0
+       Would anyone really care about prior versions? Hardly so.
+ http://docs.embarcadero.com/products/rad_studio/delphiAndcpp2009/HelpUpdate2/EN/html/devcommon/compdirsscopedenums_xml.html
+ http://docs.embarcadero.com/products/rad_studio/radstudio2007/RS2007_helpupdates/HUpdate4/EN/html/devcommon/delphicompdirectivespart_xml.html
+ http://wiki.freepascal.org/FPC_New_Features_2.6.0
+ **)
 {$MINENUMSIZE 1}
 
 // Enumerations in Delphi are SIGNED integers thus the SDK error constants would trigger
@@ -215,12 +223,6 @@ type
     XML_E_INVALIDENCODING           =  $C00CE06E
   );
 {$WARN BOUNDS_ERROR DEFAULT}
-
-  rErrorDecription = record Code: XmlError; Message: String; end;
-  TXMLLiteKnownErrors = array of rErrorDecription;
-
-var
-  XMLLiteErrorMessages: TXMLLiteKnownErrors; // may be localized by thrid-party units
 
 type
   IXMLReader = interface
@@ -349,7 +351,7 @@ Use IXmlWriterLite when you can maintain complete XML document correctness in yo
    IXmlResolver = interface
    ['{7279FC82-709D-4095-B63D-69FE4B0D9030}']
 
-   // To return a resolved entity, the implementation can return ISequentialStream, IStream, or IXmlReaderInput through the pResolvedInput parameter
+   // MSDN: To return a resolved entity, the implementation can return ISequentialStream, IStream, or IXmlReaderInput through the pResolvedInput parameter
    // By default, an IXmlReader has a resolver set to NULL. In this case, external entities are ignored—the reader simply replaces external entities
    //    with an empty string. However, if a resolver is set for a reader, the reader calls the ResolveUri method of that resolver for each external
    //    entity in the input.
@@ -360,13 +362,21 @@ Use IXmlWriterLite when you can maintain complete XML document correctness in yo
    end;
 
 
-function CreateXmlFileReader(const FileName: string = ''): IXMLReader;
+function CreateXmlFileReader(const FileName: string = ''): IXMLReader; overload;
+function CreateXmlFileReader(const FileName: string;
+  const AEncodingCodePage: UINT): IXMLReader; overload;
+function CreateXmlFileReader(const FileName: string;
+  const AEncodingName: string): IXMLReader; overload;
+function CreateXmlFileReader(const FileName: string;
+  const Encoding: TEncoding): IXmlReader; overload;
 
-function CreateXmlFileReaderWithEnc(const FileName: string; Encoding: TEncoding): IXmlReader;
-
-function CreateXmlFileWriter(const FileName: string = ''): IXMLWriter;
-
-function CreateXmlFileWriterWithEnc(const FileName: string; Encoding: TEncoding): IXmlWriter;
+function CreateXmlFileWriter(const FileName: string = ''): IXMLWriter; overload;
+function CreateXmlFileWriter(const FileName: string;
+  const AEncodingCodePage: UINT): IXMLWriter; overload;
+function CreateXmlFileWriter(const FileName: string;
+  const AEncodingName: string): IXMLWriter; overload;
+function CreateXmlFileWriter(const FileName: string;
+  const Encoding: TEncoding): IXmlWriter; overload;
 
 function OpenXmlFileStreamReader(const FileName: string): IStream;
 
@@ -375,14 +385,21 @@ function OpenXmlFileStreamWriter(const FileName: string): IStream;
 procedure CheckHR(const HR: HRESULT); inline; deprecated 'Use EXmlLite.Check';
 
 type
+  rErrorDecription = record Code: XmlError; Message: String; end;
+  TXMLLiteKnownErrors = array of rErrorDecription;
+
   EXmlLite = class(Exception)
   private
     FErrCode: Cardinal;
   public
     property ErrorCode: Cardinal read FErrCode; // 0 - unknown
+    constructor CreateForErrCode(const FunctionResult: HRESULT);
+  public
+    Class Var XMLLiteErrorMessages: TXMLLiteKnownErrors; // may be localized by third-party units
+    Class Constructor InitMessages;
+
     Class Function Check(const FunctionResult: HRESULT): HResult; inline;
     Class Function IsOK(const FunctionResult: HRESULT): boolean; inline;
-    constructor CreateForErrCode(const FunctionResult: HRESULT);
   end;
 
 implementation
@@ -395,7 +412,7 @@ const
   XMLWriterGuid:     TGUID = '{7279FC88-709D-4095-B63D-69FE4B0D9030}';
   XMLWriterLiteGUID: TGUID = '{862494C6-1310-4AAD-B3CD-2DBEEBF670D3}';
 
-// To sleep with: do not load DLL and funciton until we really call them, if ever
+// An idea to sleep with: do not load DLL and those functions until we really call them, if ever.
 // Implemented starting with Delphi 2010 - http://www.tindex.net/Language/delayed.html
 
 function CreateXmlReader(
@@ -441,42 +458,106 @@ function CreateXmlWriterOutputWithEncodingName(
 
 function CreateXmlFileReader(const FileName: string): IXMLReader;
 begin
-  CheckHR(CreateXmlReader(XMLReaderGuid, Result, nil));
+  EXmlLite.Check(CreateXmlReader(XMLReaderGuid, Result, nil));
   if (Result <> nil) and (FileName <> '') then
   begin
-    CheckHR(Result.SetProperty(XmlReaderProperty_DtdProcessing, LongWord(XmlDtdProcessing_Parse)));
-    CheckHR(Result.SetInput(OpenXmlFileStreamReader(FileName)));
+    EXmlLite.Check(Result.SetProperty(XmlReaderProperty.DtdProcessing, Ord(XmlDtdProcessing.Parse)));
+    EXmlLite.Check(Result.SetInput(OpenXmlFileStreamReader(FileName)));
   end;
 end;
 
-function CreateXmlFileReaderWithEnc(const FileName: string; Encoding: TEncoding): IXmlReader;
-var
-  input: IXmlReaderInput;
-  stream: IStream;
+function CreateXmlFileReader(const FileName: string; const Encoding: TEncoding): IXmlReader;
 begin
-  CheckHR(CreateXmlReader(XMLReaderGuid, Result, nil));
-  CheckHR(Result.SetProperty(XmlReaderProperty_DtdProcessing, LongWord(XmlDtdProcessing_Parse)));
-  stream := OpenXmlFileStreamReader(FileName);
-  CheckHR(CreateXmlReaderInputWithEncodingCodePage(stream, nil, Encoding.CodePage, true, nil, input));
-  CheckHR(Result.SetInput(input));
+  Result := CreateXmlFileReader(FileName, Encoding.CodePage);
+  // in Delphi 2009 ( if anyone would ever need ) TEncoding.CodePage was not available
+  // see OmniXML's OEncoding.pas to see a class helper hack to pull it out
 end;
+
+function CreateXmlFileReader(const FileName: string;
+  const AEncodingCodePage: UINT): IXMLReader;
+var
+  Stream: IStream;
+  ReaderInput: IXMLReaderInput;
+begin
+  Assert(FileName <> '', 'Need XML File name');
+  EXmlLite.Check(CreateXmlReader(XMLReaderGuid, Result, nil));
+  if Result <> nil then
+  begin
+    EXmlLite.Check(Result.SetProperty(XmlReaderProperty.DtdProcessing,
+      Ord(XmlDtdProcessing.Parse)));
+    Stream := OpenXmlFileStreamReader(FileName);
+    EXmlLite.Check(CreateXmlReaderInputWithEncodingCodePage(Stream, nil,
+      AEncodingCodePage, True, nil, ReaderInput));
+    EXmlLite.Check(Result.SetInput(ReaderInput));
+  end;
+end;
+
+function CreateXmlFileReader(const FileName: string;
+  const AEncodingName: string): IXMLReader;
+var
+  Stream: IStream;
+  ReaderInput: IXMLReaderInput;
+begin
+  Assert(FileName <> '', 'Need XML File name');
+  EXmlLite.Check(CreateXmlReader(XMLReaderGuid, Result, nil));
+  if Result <> nil then
+  begin
+    EXmlLite.Check(Result.SetProperty(XmlReaderProperty.DtdProcessing,
+      Ord(XmlDtdProcessing.Parse)));
+    Stream := OpenXmlFileStreamReader(FileName);
+    EXmlLite.Check(CreateXmlReaderInputWithEncodingName(Stream, nil,
+      PWideChar(AEncodingName), True, nil, ReaderInput));
+    EXmlLite.Check(Result.SetInput(ReaderInput));
+  end;
+end;
+
 
 function CreateXmlFileWriter(const FileName: string): IXMLWriter;
 begin
-  CheckHR(CreateXmlWriter(XMLWriterGuid, iUnknown(Result), nil));
+  EXmlLite.Check(CreateXmlWriter(XMLWriterGuid, iUnknown(Result), nil));
   if (Result <> nil) and (FileName <> '') then
-    CheckHR(Result.SetOutput(OpenXmlFileStreamWriter(FileName)));
+    EXmlLite.Check(Result.SetOutput(OpenXmlFileStreamWriter(FileName)));
 end;
 
-function CreateXmlFileWriterWithEnc(const FileName: string; Encoding: TEncoding): IXmlWriter;
-var
-  output: IXmlWriterOutput;
-  stream: IStream;
+function CreateXmlFileWriter(const FileName: string; const Encoding: TEncoding): IXmlWriter;
 begin
-  CheckHR(CreateXmlWriter(XMLWriterGuid, iUnknown(Result), nil));
-  stream := OpenXmlFileStreamWriter(FileName);
-  CheckHR(CreateXmlWriterOutputWithEncodingCodePage(stream, nil, Encoding.CodePage, output));
-  CheckHR(Result.SetOutput(output));
+  Result := CreateXmlFileWriter( FileName, Encoding.CodePage );
+end;
+
+function CreateXmlFileWriter(const FileName: string;
+  const AEncodingCodePage: UINT): IXMLWriter;
+var
+  WriterOutput: IXMLWriterOutput;
+  Stream: IStream;
+begin
+  Assert(FileName <> '', 'Need XML File name');
+  EXmlLite.Check(CreateXmlWriter(XMLWriterGuid, IUnknown(Result), nil));
+  if (Result <> nil) then
+  begin
+    Stream := OpenXmlFileStreamWriter(FileName);
+    EXmlLite.Check(CreateXmlWriterOutputWithEncodingCodePage(Stream, nil,
+      AEncodingCodePage, WriterOutput));
+    Assert(WriterOutput <> nil);
+    EXmlLite.Check(Result.SetOutput(WriterOutput));
+  end;
+end;
+
+function CreateXmlFileWriter(const FileName: string;
+  const AEncodingName: string): IXMLWriter; overload;
+var
+  WriterOutput: IXMLWriterOutput;
+  Stream: IStream;
+begin
+  Assert(FileName <> '', 'Need XML File name');
+  EXmlLite.Check(CreateXmlWriter(XMLWriterGuid, IUnknown(Result), nil));
+  if (Result <> nil) then
+  begin
+    Stream := OpenXmlFileStreamWriter(FileName);
+    EXmlLite.Check(CreateXmlWriterOutputWithEncodingName(Stream, nil,
+      PWideChar(AEncodingName), WriterOutput));
+    Assert(WriterOutput <> nil);
+    EXmlLite.Check(Result.SetOutput(WriterOutput));
+  end;
 end;
 
 
@@ -498,8 +579,8 @@ var s: string; i: integer;
 begin
   s := Format('Microsoft XmlLite Error: %d == 0x%x', [FunctionResult, FunctionResult]);
 
-  // looking for registered human-readable description.
-  // Could use smwehat faster binary search ( TArray<T>.BinarySearch helper), but...
+  // Now looking for matching registered human-readable description, if exists.
+  // Could use somewhat faster binary search ( TArray<T>.BinarySearch helper), but...
   //   1) if the error messages would get localized, then no warranty they'd still be sorted
   //   2) more dependencies on later Delphi RTL, where speed is most probably no more a goal
   for i := Low(XMLLiteErrorMessages) to High(XMLLiteErrorMessages) do
@@ -534,13 +615,12 @@ begin
   EXmlLite.Check( HR );
 end;
 
-
-function r(const c: cardinal; m: string): rErrorDecription; inline;
-begin
-  Result.Code := XmlError(c);
-  Result.Message := m;
-end;
-
+class constructor EXmlLite.InitMessages;
+  function r(const c: cardinal; m: string): rErrorDecription; inline;
+  begin
+    Result.Code := XmlError(c);
+    Result.Message := m;
+  end;
 begin
   XMLLiteErrorMessages := TXMLLiteKnownErrors.Create(
     r($C00CEE01, 'unexpected end of input'),
@@ -629,4 +709,6 @@ begin
     r($C00CE01F, 'XML: Invalid Unicode characters'),
     r($C00CE06E, 'XML: Invalid charset encoding')
   );
+end;
+
 end.
